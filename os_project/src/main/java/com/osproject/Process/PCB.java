@@ -30,7 +30,6 @@ public class PCB {
         this.pid = pid;
         this.state = ProcessState.NEW;
         this.priority = priority;
-        this.registers = new HashMap<>();
         this.baseAddress = 0;
         this.limit = 0;
         this.openFiles = new ArrayList<>();
@@ -40,6 +39,15 @@ public class PCB {
         this.completionTime = 0;
         this.programName = programName;
         this.isSystemProcess = isSystemProcess;
+
+        //registri, dodati po potrebi vise R
+        this.registers = new HashMap<>();
+        this.registers.put("ACC",0);
+        this.registers.put("R1",0);
+        this.registers.put("R2",0);
+        this.registers.put("R3",0);
+        this.registers.put("R4",0);
+        this.registers.put("PC",0);
 
     }
 
@@ -158,7 +166,31 @@ public class PCB {
   public void setRegister(String name, int value){
         if (registers.containsKey(name)){
             registers.put(name,value);//update-uje vrijednost postojeceg registra
+        }else{
+            System.out.println("Registar" + name + " ne postoji!"); //ako registar ne postoji, ne kreira se novi
         }
+  }
+
+  public int getACC(){
+        return registers.get("ACC");
+  }
+
+  public void setACC(int value){
+        setRegister("ACC", value);
+  }
+
+  public void addOpenFileHandle (OpenFileHandle handle){
+        if (handle != null){
+            openFiles.add(handle);
+        }
+  }
+
+  public void closeAllFiles (){
+        openFiles.clear();
+  }
+
+  public void removeOpenFile(OpenFileHandle handle){
+        openFiles.remove(handle);
   }
 
     @Override
