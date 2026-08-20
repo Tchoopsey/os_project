@@ -40,7 +40,7 @@ public class PCB {
         this.programName = programName;
         this.isSystemProcess = isSystemProcess;
 
-        //registri, dodati po potrebi vise R
+        //registri; dodati po potrebi vise R;
         this.registers = new HashMap<>();
         this.registers.put("ACC",0);
         this.registers.put("R1",0);
@@ -190,7 +190,9 @@ public class PCB {
   }
 
   public void removeOpenFile(OpenFileHandle handle){
-        openFiles.remove(handle);
+        if (handle != null){
+            openFiles.remove(handle);
+        }
   }
 
     @Override

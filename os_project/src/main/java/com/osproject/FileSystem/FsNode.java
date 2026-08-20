@@ -1,5 +1,5 @@
 package com.osproject.FileSystem;
 
-public class FileSystem {
+public abstract class FsNode {
 
 }

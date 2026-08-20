@@ -1,4 +1,6 @@
 package com.osproject.FileSystem;
 
-public class FileMode {
+public enum FileMode {
+    READ,
+    WRITE,
 }

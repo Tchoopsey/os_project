@@ -27,7 +27,7 @@ public class BlockedQueue {
         return list.isEmpty();
     }
 
-    public int numOfCurrentProcessesInQueue(){
+    public int size(){
         return list.size();
     }
 
