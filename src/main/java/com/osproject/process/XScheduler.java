@@ -1,4 +1,4 @@
-package com.osproject.Process;
+package com.osproject.process;
 
 public class XScheduler implements Scheduler{
     private int timeQuantum;

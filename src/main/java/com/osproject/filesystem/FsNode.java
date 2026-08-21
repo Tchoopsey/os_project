@@ -1,4 +1,4 @@
-package com.osproject.FileSystem;
+package com.osproject.filesystem;
 
 public abstract class FsNode {
 

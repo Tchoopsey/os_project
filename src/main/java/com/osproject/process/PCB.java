@@ -1,9 +1,7 @@
-package com.osproject.Process;
+package com.osproject.process;
 
-import com.osproject.FileSystem.OpenFileHandle;
+import com.osproject.filesystem.OpenFileHandle;
 
-import java.awt.desktop.OpenFilesHandler;
-import java.awt.font.ImageGraphicAttribute;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

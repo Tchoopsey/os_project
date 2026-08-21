@@ -1,4 +1,4 @@
-package com.osproject.Process;
+package com.osproject.process;
 
 public enum ProcessState {
     NEW, //proces je kreiran 💁🏻‍♀️slay

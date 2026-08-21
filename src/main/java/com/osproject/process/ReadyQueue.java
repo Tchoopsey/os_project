@@ -1,4 +1,4 @@
-package com.osproject.Process;
+package com.osproject.process;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
