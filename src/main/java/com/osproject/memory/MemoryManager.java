@@ -12,12 +12,12 @@ public class MemoryManager {
     private RAM ram;
     private List<MemorySegment> segments;
 
-	public MemoryManager(RAM ram) {
-		this.ram = ram;
+	public MemoryManager(int ramSize) {
+		this.ram = new RAM(ramSize);
         this.segments = new ArrayList<>();
 	}
 
-    private boolean allocate(PCB p, int size) {
+    public boolean allocate(PCB p, int size) {
         int base = 0;
 
         // pronalazi prvi slobodan segment
@@ -43,7 +43,7 @@ public class MemoryManager {
         return true;
     }
     
-    private void free(PCB p) {
+    public void free(PCB p) {
         MemorySegment segToRemove = null;
 
         // pronalazi trazeni segment
@@ -61,7 +61,7 @@ public class MemoryManager {
         }
     }
 
-    private int read(PCB p, int address) {
+    public int read(PCB p, int address) {
         if (address < p.getBaseAddress() ||
             address > p.getLimit()) {
             System.err.println("GRESKA: Adresa van memorije!");
@@ -69,7 +69,7 @@ public class MemoryManager {
         return ram.getCells()[address];
     }
 
-    private void write(PCB p, int address, int value) {
+    public void write(PCB p, int address, int value) {
         if (address < p.getBaseAddress() ||
             address > p.getLimit()) {
             System.err.println("GRESKA: Adresa van memorije!");
@@ -77,7 +77,7 @@ public class MemoryManager {
         ram.getCells()[address] = value;
     }
 
-    private String dumpMemory() {
+    public String dumpMemory() {
         StringBuilder sb = new StringBuilder();
 
         sb.append("Memory:\n\n");

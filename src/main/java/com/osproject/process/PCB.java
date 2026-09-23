@@ -49,6 +49,10 @@ public class PCB {
 
     }
 
+    public PCB(int pid, String programName, int priority){
+        this(pid, programName,priority,0,10,false);
+    }
+
     public int getPid() {
         return pid;
     }
@@ -192,6 +196,8 @@ public class PCB {
             openFiles.remove(handle);
         }
   }
+
+
 
     @Override
     public String toString() {

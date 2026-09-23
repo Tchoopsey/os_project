@@ -1,13 +1,26 @@
 package com.osproject.io;
 
-abstract class IODevice {
-    private String name;
+import com.osproject.process.PCB;
 
-    void startOperation(IOOperation op, PCB p) {
-        
+public abstract class IODevice {
+    protected String name;
+    protected boolean busy;
+
+    public IODevice (String name){
+        this.name = name;
+        this.busy = false;
+    }
+    public abstract void  startOperation(IOOperation op, PCB p);
+
+    public boolean isBusy(){
+        return busy;
     }
 
-    private boolean isBusy(){
+    public String getName() {
+        return name;
+    }
 
+    public void setName(String name) {
+        this.name = name;
     }
 }
