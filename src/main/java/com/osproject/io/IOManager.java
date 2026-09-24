@@ -40,6 +40,7 @@ public class IOManager {
         if (device.isBusy()){
             System.out.println("[IOManager] Device " + deviceName + " is currently busy. Process PID = " + p.getPid() + " is passed to blockedQueue");
             if (kernel != null){
+                kernel.getBlockedQueue().setWaitingDevice(p,device);
                 kernel.getBlockedQueue().block(p);
             }
             return;
@@ -47,6 +48,7 @@ public class IOManager {
         device.startOperation(op,p);
 
         if (kernel != null){
+            kernel.getBlockedQueue().setWaitingDevice(p,device);
             kernel.getBlockedQueue().block(p);
         }
 
@@ -76,7 +78,7 @@ public class IOManager {
                 busyDevices.add(d);
             }
         }
-        for (IODevice d: devices){
+        for (IODevice d: busyDevices){
             completeIO(d);
         }
     }
@@ -105,6 +107,7 @@ public class IOManager {
         }
         return null;
     }
+
 
     @Override
     public String toString() {

@@ -39,4 +39,12 @@ public class MemorySegment {
 	public void setLimit(int limit) {
 		this.limit = limit;
 	}
+
+	@Override
+	public String toString() {
+		String ownerPid = (owner != null) ? String.valueOf(owner.getPid()) : "free";
+		int size = limit - base + 1;
+		return "Segment{PID=" + ownerPid + ", base=" + base +
+				", limit=" + limit + ", size=" + size + "}";
+	}
 }

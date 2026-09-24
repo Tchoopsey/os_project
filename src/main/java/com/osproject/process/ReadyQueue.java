@@ -19,6 +19,10 @@ public class ReadyQueue {
         }
     }
 
+    public boolean removePCB (PCB process){
+        return queue.remove(process);
+    }
+
     public PCB removeNext(){
         return queue.poll();
     }

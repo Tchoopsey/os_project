@@ -25,7 +25,7 @@ public class MemoryManager {
             if (base + size - 1 < seg.getBase()) {
                 break;
             }
-            base = seg.getLimit() - 1;
+            base = seg.getLimit() + 1;
         }
 
         // provjera slobodnog RAM prostora
@@ -75,6 +75,14 @@ public class MemoryManager {
             System.err.println("GRESKA: Adresa van memorije!");
         }
         ram.getCells()[address] = value;
+    }
+
+    public RAM getRam() {
+        return ram;
+    }
+
+    public List<MemorySegment> getSegments() {
+        return segments;
     }
 
     public String dumpMemory() {
