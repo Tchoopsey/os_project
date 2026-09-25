@@ -3,15 +3,13 @@ package com.osproject.io;
 import com.osproject.filesystem.File;
 import com.osproject.process.PCB;
 
-import java.util.HashMap;
-import java.util.IllegalFormatCodePointException;
-import java.util.Map;
+import java.util.*;
 
 /**
  * DiskDevice
  */
 public class DiskDevice extends IODevice {
-    private Map<File,Integer> allocatedFiles;
+    private Queue<File> fileQueue;
     private int totalBlocks;
     private int usedBlocks;
     public static final int BLOCK_SIZE = 64;
@@ -20,11 +18,11 @@ public class DiskDevice extends IODevice {
         super(name);
         this.totalBlocks = totalBlocks;
         this.usedBlocks = 0;
-        this.allocatedFiles = new HashMap<>();
+        this.fileQueue = new LinkedList<>();
     }
 
     public void allocateFile(File file){
-        if (allocatedFiles.containsKey(file)){
+        if (fileQueue.contains(file)){
             throw new IllegalArgumentException("File " + file.getName()+ "is already allocated");
         }
         int blocksNeeded = calculateBlocksNeeded(file);
@@ -32,7 +30,7 @@ public class DiskDevice extends IODevice {
             throw new IllegalArgumentException("There's not enough space on disk. Space needed " + blocksNeeded + ", free space " + (totalBlocks - usedBlocks));
         }
 
-        allocatedFiles.put(file, blocksNeeded);
+        fileQueue.add(file);
         usedBlocks += blocksNeeded;
     }
 
@@ -42,14 +40,20 @@ public class DiskDevice extends IODevice {
     }
 
     public void deallocateFile(File file){
-        Integer blocks = allocatedFiles.remove(file);
-        if (blocks != null){
+        if (fileQueue.remove(file)){
+            int blocks = calculateBlocksNeeded(file);
             usedBlocks -= blocks;
+
+            System.out.println("[DISK " + name + "] FIFO dequeue " + file.getName());
         }
     }
 
+    public File peekOldestFile(){
+        return fileQueue.peek();
+    }
+
     public boolean isAllocated (File file){
-        return allocatedFiles.containsKey(file);
+        return fileQueue.contains(file);
     }
 
     public int getFreeBlocks(){
@@ -69,9 +73,17 @@ public class DiskDevice extends IODevice {
         System.out.println("Capacity: " + totalBlocks +" blocks" );
         System.out.println("Used up: " + usedBlocks + " blocks");
         System.out.println("Free: " + getFreeBlocks() + " blocks");
-        System.out.println("Files on a disk: " );
-        allocatedFiles.forEach(((file, blocks) -> System.out.println(" - " + file.getName() + " (" + blocks + " blocks")));
-        System.out.println("-----------------------------");
+        System.out.println("File queue FIFO order: " );
+        if (fileQueue.isEmpty()){
+            System.out.println("(EMPTY)");
+        }else {
+            int i = 1;
+            for (File f : fileQueue){
+                System.out.println(" " + i++ + f.getName() + " (" + calculateBlocksNeeded(f) + "blocks)");
+            }
+        }
+        System.out.println("-------------------------------------");
+
     }
 
 
@@ -92,7 +104,7 @@ public class DiskDevice extends IODevice {
     @Override
     public String toString() {
         return "DiskDevice{" +
-                "allocatedFiles=" + allocatedFiles +
+                "files =" + fileQueue +
                 ", totalBlocks=" + totalBlocks +
                 ", usedBlocks=" + usedBlocks +
                 '}';

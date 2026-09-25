@@ -40,6 +40,13 @@ public class CPU {
         }
     }
 
+    private int checkAddress(PCB pcb, int address){
+        if (address < 0 || address >= pcb.getLimit() -pcb.getBaseAddress() + 1){
+            throw new SecurityException("Address space violation! PID = " + pcb.getPid() + " tried accessing address  " + address + " (process size= "+ (pcb.getLimit() - pcb.getBaseAddress() + 1) + ")");
+        }
+        return address;
+    }
+
     public  PCB getCurrent(){
         return current;
     }

@@ -42,9 +42,17 @@ public class MemorySegment {
 
 	@Override
 	public String toString() {
-		String ownerPid = (owner != null) ? String.valueOf(owner.getPid()) : "free";
-		int size = limit - base + 1;
-		return "Segment{PID=" + ownerPid + ", base=" + base +
-				", limit=" + limit + ", size=" + size + "}";
+		if (isFree()){
+			return String.format("FREE [base = %d, limit = %d, size = %d]", base,limit,getSize());
+		}
+		return String.format("PID = %d [base = %d, limit = %d, size = %d]", owner.getPid(),base, limit ,getSize());
+	}
+
+	public int getSize(){
+		return limit - base + 1;
+	}
+
+	public boolean isFree(){
+		return owner == null;
 	}
 }
