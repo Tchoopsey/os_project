@@ -2,9 +2,11 @@ package com.osproject.shell;
 
 import com.osproject.OS.OSKernel;
 import com.osproject.filesystem.Directory;
+import com.osproject.filesystem.File;
 import com.osproject.filesystem.FsNode;
 import com.osproject.memory.MemorySegment;
 import com.osproject.process.PCB;
+import com.osproject.process.Scheduler;
 
 import java.util.Arrays;
 import java.util.List;
@@ -15,6 +17,7 @@ public class Shell {
     private OSKernel kernel;
     private Directory currentDirectory;
     private boolean running;
+    private Scanner scanner;
 
     public Shell(OSKernel kernel) {
         this.kernel = kernel;
@@ -23,7 +26,7 @@ public class Shell {
     }
 
     public void start() {
-        Scanner scanner = new Scanner(System.in);
+        this.scanner = new Scanner(System.in);
         System.out.println();
         System.out.println("=====================================");
         System.out.println("   OS Shell - Minimal Command Language");
@@ -66,6 +69,11 @@ public class Shell {
             case "mem":    cmdMem(); break;
             case "rm":     cmdRm(args); break;
             case "kill":   cmdKill(args); break;
+            case "cat":    cmdCat(args); break;
+            case "touch":  cmdTouch(args); break;
+            case "asm":    cmdAsm(args); break;
+            case "exec":   cmdExec(args); break;
+            case "tick":   cmdTick(args); break;
             case "help":   cmdHelp(); break;
             case "exit":   cmdExit(); break;
             default:
@@ -162,21 +170,24 @@ public class Shell {
             return;
         }
 
-        System.out.printf("%-5s %-12s %-10s %-10s %-8s %-8s%n",
-                "PID", "NAME", "STATE", "PC", "RAM", "PRIO");
+        System.out.printf("%-5s %-15s %-10s %-8s %-8s %-8s%n",
+                "PID", "NAME", "STATE", "PC", "INSTR", "RAM");
         System.out.println("----------------------------------------------------------");
 
         for (PCB p : processes) {
             int ramSize = p.getLimit() - p.getBaseAddress() + 1;
-            if (ramSize < 0) ramSize = 0;
+            if (ramSize < 0) {
+                ramSize = 0;
+            }
 
             System.out.printf("%-5d %-12s %-10s %-10d %-8d %-8d%n",
                     p.getPid(),
                     p.getProgramName(),
                     p.getState(),
                     p.getProgramCounter(),
-                    ramSize,
-                    p.getPriority()
+                    p.getInstructionsExecuted(),
+                    ramSize
+
             );
         }
     }
@@ -320,6 +331,11 @@ public class Shell {
         System.out.println("  mem                - show RAM usage");
         System.out.println("  rm <name>          - remove file/directory");
         System.out.println("  kill <pid>         - terminate process");
+        System.out.println("  touch <file>       - create empty file");
+        System.out.println("  cat <file>         - display file contents");
+        System.out.println("  asm <file>         - enter assembler code");
+        System.out.println("  exec <file> [prio] - run process from binary");
+        System.out.println("  tick [n]           - advance simulation by n ticks (default 1)");
         System.out.println("  exit               - shut down OS");
         System.out.println("  help               - show this list");
         System.out.println("==============================");
@@ -331,7 +347,117 @@ public class Shell {
         running = false;
     }
 
+    private void cmdTick(String[] args) {
+        int n = 1;
+        if (args.length >= 1) {
+            try {
+                n = Integer.parseInt(args[0]);
+            } catch (NumberFormatException e) {
+                System.err.println("[Shell] Tick count must be a number");
+                return;
+            }
+        }
 
+        for (int i = 0; i < n; i++) {
+            kernel.timerTick();
+        }
+        System.out.println("[Shell] Advanced " + n + " tick(s).");
+    }
+
+    private void cmdCat(String[] args){
+        if (args.length == 0){
+            System.err.println("Usage: cat<file>");
+            return;
+        }
+        FsNode node = currentDirectory.getChild(args[0]);
+        if (node == null){
+            System.err.println("[Shell] Not found " + args[0]);
+            return;
+        }
+        if (!(node instanceof File)){
+            System.err.println("[Shell] Not a file: " + args[0]);
+            return;
+        }
+
+        System.out.println(((File)node).read());
+    }
+
+    private void cmdTouch(String[] args){
+        if (args.length == 0){
+            System.err.println("Usage: touch<file>");
+            return;
+        }
+        try {
+            File f = kernel.getFileSystem().createFileIn(currentDirectory,args[0]);
+            System.out.println("[Shell] Created file: " + args[0]);
+        }catch (IllegalArgumentException e){
+            System.err.println("[Shell] " + e.getMessage());
+        }
+    }
+
+    private void cmdAsm(String[] args){
+        if (args.length == 0){
+            System.err.println("Usage: asm <file>");
+            return;
+        }
+        FsNode node = currentDirectory.getChild(args[0]);
+        if (!(node instanceof File)){
+            System.err.println("[Shell] File not found "  + args[0] );
+            return;
+        }
+        File file = (File)node;
+        kernel.getDma().transferToRAM(file);
+        System.out.println("Enter assembler code (empty line to finish):");
+        StringBuilder stringBuilder = new StringBuilder();
+        while (true){
+            System.out.print("asm> ");
+            String line = scanner.nextLine();
+            if (line.isEmpty()){
+                break;
+            }
+            stringBuilder.append(line).append("\n");
+        }
+
+        try {
+            String binary = com.osproject.assembler.Assembler.compileToBinary(stringBuilder.toString());
+            file.write(binary);
+            kernel.getDma().transferToDisk(file);
+            System.out.println("[Shell] Compiled and saved " +args[0]);
+        }catch (Exception e){
+            System.err.println("[Shell] Assembly error: " + e.getMessage());
+        }
+    }
+
+    private void cmdExec(String[] args){
+        if (args.length == 0){
+            System.err.println("Usage: exec<file> [priority]");
+            return;
+        }
+        int priority = 5;
+        if (args.length >= 2){
+            try {
+                priority = Integer.parseInt(args[1]);
+            }catch (NumberFormatException e){
+                System.err.println("[Shell] Priority must be a number");
+                return;
+            }
+        }
+
+        FsNode node = currentDirectory.getChild(args[0]);
+        if (!(node instanceof File)){
+            System.err.println("[Shell] File not found " + args[0]);
+            return;
+        }
+        File file = (File) node;
+        kernel.getDma().transferToRAM(file);
+        String binary = file.read();
+        kernel.getDma().transferToDisk(file);
+
+        int pid = kernel.createProcessFromBinary(args[0],binary,priority);
+        if (pid > 0){
+            System.out.println("[Shell] Process started: PID=" + pid);
+        }
+    }
     private String getFullPath(Directory dir) {
         if (dir.getParent() == null) return "/";
 

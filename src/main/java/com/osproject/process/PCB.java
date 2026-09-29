@@ -1,5 +1,6 @@
 package com.osproject.process;
 
+import com.osproject.assembler.Instruction;
 import com.osproject.filesystem.OpenFileHandle;
 
 import java.util.ArrayList;
@@ -23,6 +24,9 @@ public class PCB {
     private int completionTime;
     private String programName;
     private boolean isSystemProcess;
+    private List<Instruction> program;
+    private int instructionsExecuted;
+
 
     public PCB(int pid, String programName, int priority, int arrivalTime, int burstTime,boolean isSystemProcess){
         this.pid = pid;
@@ -37,6 +41,8 @@ public class PCB {
         this.completionTime = 0;
         this.programName = programName;
         this.isSystemProcess = isSystemProcess;
+        this.program = new ArrayList<>();
+        this.instructionsExecuted = 0;
 
         //registri; dodati po potrebi vise R;
         this.registers = new HashMap<>();
@@ -48,6 +54,7 @@ public class PCB {
         this.registers.put("PC",0);
 
     }
+
 
     public PCB(int pid, String programName, int priority){
         this(pid, programName,priority,0,10,false);
@@ -137,10 +144,18 @@ public class PCB {
         this.completionTime = completionTime;
     }
 
+    public int getInstructionsExecuted() {
+        return instructionsExecuted;
+    }
+
+    public void incrementInstructions() {
+        this.instructionsExecuted++;
+    }
+
     //da li je proces zavrsen ili prekinut naglo :')
     public boolean isFinished(){
         if (remainingTime <= 0 || programCounter == -1){ //kad CPU izvrsi HLT instrukciju, treba PC da se postavi na -1
-            return true;                                    // ako je instrukcija == HLT --> nesto.setProgramCounter(-1); u CPU dijelu
+            return true;
         }
         return false;
     }
@@ -169,11 +184,24 @@ public class PCB {
         if (registers.containsKey(name)){
             registers.put(name,value);//update-uje vrijednost postojeceg registra
         }else{
-            System.out.println("Registar" + name + " ne postoji!"); //ako registar ne postoji, ne kreira se novi
+            System.out.println("Register" + name + " doesn't exist!"); //ako registar ne postoji, ne kreira se novi
         }
   }
 
-  public int getACC(){
+
+
+
+  public List<Instruction> getProgram(){
+        return program;
+  }
+
+    public void setProgram(List<Instruction> program) {
+        this.program = program;
+    }
+
+
+
+    public int getACC(){
         return registers.get("ACC");
   }
 

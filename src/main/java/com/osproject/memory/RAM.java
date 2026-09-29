@@ -53,6 +53,11 @@ public class RAM {
 		System.out.println("-----------------------------------");
 	}
 
+	public int read(int address){
+		checkAddress(address);
+		return cells[address];
+	}
+
 	@Override
 	public String toString() {
 		return "RAM{" +

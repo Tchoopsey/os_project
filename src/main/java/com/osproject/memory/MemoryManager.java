@@ -19,7 +19,7 @@ public class MemoryManager {
 		this.ram = new RAM(ramSize);
         this.segments = new ArrayList<>();
         this.freeList = new LinkedList<>();
-
+        initializePartitions(ramSize);
 	}
 
     public boolean allocate(PCB p, int size) {
@@ -40,43 +40,36 @@ public class MemoryManager {
         }
         throw new IllegalArgumentException("No partiton large enough for size =" + size );
     }
-    
-    public void free(PCB p) {
-        MemorySegment segToRemove = null;
 
-        // pronalazi trazeni segment
+    public void free(PCB p) {
+        MemorySegment found = null;
+
         for (MemorySegment seg : segments) {
             if (seg.getOwner() == p) {
-                segToRemove = seg;
+                found = seg;
                 break;
             }
         }
 
-        if (segToRemove == null){
-            return;
-        }
+        if (found == null) return;
 
-        if (segToRemove != null) {
-            segments.remove(segToRemove);
-            p.setBaseAddress(0);
-            p.setLimit(0);
-            freeList.add(segToRemove);
-        }
+        found.setOwner(null);
+        freeList.add(found);
+        p.setBaseAddress(0);
+        p.setLimit(0);
 
-        System.out.println("[MemoryManager] freed partition [ " + segToRemove.getBase() + ", " + segToRemove.getLimit() + "]");
+        System.out.println("[MemoryManager] freed partition [ " +
+                found.getBase() + ", " + found.getLimit() + "]");
     }
 
     public int read(PCB p, int address) {
         checkAddress(p,address);
-        return ram.getCells()[address];
+        return ram.read(p.getBaseAddress()+address);
     }
 
     public void write(PCB p, int address, int value) {
-        if (address < p.getBaseAddress() ||
-            address > p.getLimit()) {
-            System.err.println("GRESKA: Adresa van memorije!");
-        }
-        ram.getCells()[address] = value;
+        checkAddress(p,address);
+        ram.write(p.getBaseAddress()+address,value);
     }
 
     public RAM getRam() {
@@ -121,15 +114,16 @@ public class MemoryManager {
         sb.append("Memory:\n\n");
 
         for (MemorySegment seg : segments) {
-            sb.append("PID ")
-                .append(seg.getOwner().getPid())
-                .append(": ")
-                .append(seg.getBase())
-                .append(" - ")
-                .append(seg.getLimit())
-                .append("\n");
+            if (seg.getOwner() != null){
+                sb.append("PID ")
+                        .append(seg.getOwner().getPid())
+                        .append(": ")
+                        .append(seg.getBase())
+                        .append(" - ")
+                        .append(seg.getLimit())
+                        .append("\n");
+            }
         }
-
         return sb.toString();
     }
 
@@ -147,6 +141,7 @@ public class MemoryManager {
             MemorySegment segment = new MemorySegment(null,address,address + size-1);
             freeList.add(segment);
             segments.add(segment);
+            address += size;
             index ++;
 
         }
@@ -154,7 +149,8 @@ public class MemoryManager {
     }
 
     private void checkAddress(PCB p, int address){
-        if (address < p.getBaseAddress() || address > p.getLimit()){
+        int size = p.getLimit() - p.getBaseAddress() + 1;
+        if (address < 0 || address >= size){
             throw new SecurityException("Address space violation PID = " + p.getPid() + " tried accessing address " + address + " outside [" + p.getBaseAddress() + ", " + p.getLimit() + "]");
         }
     }

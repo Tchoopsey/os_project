@@ -45,7 +45,7 @@ public class BinaryEncoder {
     }
 
     public static String toBinaryString(int value){
-        return String.format("%32", Integer.toBinaryString(value)).replace(' ', '0');
+        return String.format("%32s", Integer.toBinaryString(value)).replace(' ', '0');
     }
 
 

@@ -1,11 +1,10 @@
 package com.osproject.OS;
 
+import com.osproject.assembler.Assembler;
+import com.osproject.assembler.Instruction;
 import com.osproject.filesystem.File;
 import com.osproject.filesystem.FileSystem;
-import com.osproject.io.ConsoleDevice;
-import com.osproject.io.DiskDevice;
-import com.osproject.io.IODevice;
-import com.osproject.io.IOManager;
+import com.osproject.io.*;
 import com.osproject.memory.MemoryManager;
 import com.osproject.memory.RAM;
 import com.osproject.process.*;
@@ -28,15 +27,16 @@ public class OSKernel {
     private static final int DEFAULT_PROCESS_MEMORY = 64;
     private int timeQuantum;
     private static final int DEFAULT_TIME_QUANTUM = 5;
+    private DMAChannel dma;
 
     public OSKernel (){
         this.processTable = new ArrayList<>();
         this.readyQueue = new ReadyQueue();
         this.blockedQueue = new BlockedQueue();
-        this.cpu = new CPU();
+        this.memoryManager = new MemoryManager(1024);
+        this.cpu = new CPU(memoryManager);
         this.timeQuantum = DEFAULT_TIME_QUANTUM;
         this.scheduler = new XScheduler(DEFAULT_TIME_QUANTUM);
-        this.memoryManager = new MemoryManager(1024);
         this.ioManager = new IOManager(this);
         this.nextPid = 1;
 
@@ -44,20 +44,43 @@ public class OSKernel {
         this.ioManager.addDevice(disk);
         this.fileSystem = new FileSystem(disk);
         this.ioManager.addDevice(new ConsoleDevice("CONSOLE0"));
+        this.dma = new DMAChannel("DMA0");
+
 
     }
 
-    public  void boot(){
+    public void boot() {
         System.out.println("---------------------------------");
         System.out.println("-----OS Kernel is starting-------");
         System.out.println("---------------------------------");
-        createProcess("init",10);
+
+        createSystemProcess("init", 10, 20);
+        createSystemProcess("scheduler", 1, 15);
+        createSystemProcess("memory_manager", 2, 12);
+        createSystemProcess("io_handler", 3, 10);
 
         System.out.println("[Kernel] Boot completed, nextPid = " + nextPid);
-        System.out.println("[Kernel] Proccess in table " + processTable.size());
+        System.out.println("[Kernel] Processes in table: " + processTable.size());
         System.out.println("-------------------------------------");
     }
 
+    private int createSystemProcess(String name, int priority, int burstTime) {
+        int pid = nextPid++;
+        PCB pcb = new PCB(pid, name, priority, 0, burstTime, true);
+
+        try {
+            memoryManager.allocate(pcb, DEFAULT_PROCESS_MEMORY);
+        } catch (IllegalArgumentException e) {
+            System.err.println("[Kernel] Failed system process: " + name);
+            return -1;
+        }
+
+        pcb.setState(ProcessState.READY);
+        processTable.add(pcb);
+        readyQueue.add(pcb);
+        System.out.println("[Kernel] System process: " + name + " PID=" + pid);
+        return pid;
+    }
     public  int createProcess(String programName, int priority){
         int pid = nextPid++;
         PCB pcb = new PCB(pid,programName,priority);
@@ -106,6 +129,37 @@ public class OSKernel {
 
     }
 
+    public int createProcessFromBinary(String name, String binary, int priority) {
+        if (binary == null || binary.trim().isEmpty()) {
+            System.err.println("[Kernel] Binary is empty - cannot create process");
+            return -1;
+        }
+
+        int pid = nextPid++;
+        PCB pcb = new PCB(pid, name, priority);
+
+        try {
+            List<Instruction> program = Assembler.fromBinary(binary);
+            if (program.isEmpty()) {
+                System.err.println("[Kernel] No instructions in binary");
+                return -1;
+            }
+            pcb.setProgram(program);
+
+            int size = Math.max(program.size() * 2, 64);
+            memoryManager.allocate(pcb, size);
+        } catch (Exception e) {
+            System.err.println("[Kernel] Failed to load binary: " + e.getMessage());
+            return -1;
+        }
+
+        pcb.setState(ProcessState.READY);
+        processTable.add(pcb);
+        readyQueue.add(pcb);
+        System.out.println("[Kernel] Created from binary: PID=" + pid + " (" + name + ")");
+        return pid;
+    }
+
     public  void timerTick(){
         ioManager.tick();
         if (cpu.getCurrent() == null){
@@ -148,6 +202,7 @@ public class OSKernel {
             System.out.println("[Kernel] Process PID = " + pcb.getPid() + " returned to readyQueue");
         }
     }
+
 
     public  void syscall (Syscall request){
         if (request == null || request.getType() == null){
@@ -290,6 +345,7 @@ public class OSKernel {
         }
     }
 
+
     public PCB findProcessByPid(int pid) {
         for (PCB pcb : processTable) {
             if (pcb.getPid() == pid) {
@@ -369,6 +425,10 @@ public class OSKernel {
 
     public void setNextPid(int nextPid) {
         this.nextPid = nextPid;
+    }
+
+    public DMAChannel getDma(){
+        return dma;
     }
 
 

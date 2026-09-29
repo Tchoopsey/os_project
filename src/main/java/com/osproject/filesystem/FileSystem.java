@@ -104,4 +104,21 @@ public class FileSystem {
         return fullPath.substring(0,lastSlash);
     }
 
+    public File createFileIn(Directory parent, String name){
+        if (parent == null){
+            throw new IllegalArgumentException("Parent directory is null");
+        }
+        if (name == null || name.isEmpty()){
+            throw new IllegalArgumentException("File name is empty");
+        }
+        if (parent.getChild(name) != null) {
+            throw new IllegalArgumentException("Already exists  " +name);
+        }
+
+        File newFile = new File(name,parent);
+        disk.allocateFile(newFile);
+        parent.addChild(newFile);
+        return newFile;
+    }
+
 }
